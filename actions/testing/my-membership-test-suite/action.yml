@@ -1,0 +1,55 @@
+name: 'Run Tests'
+description: 'Runs various types of tests including unit, component, and e2e tests'
+
+inputs:
+  test-type:
+    description: 'Type of test to run (unit/component/e2e)'
+    required: true
+  coverage:
+    description: 'Whether to run coverage'
+    required: false
+    default: 'false'
+  cypress-config:
+    description: 'Cypress config file path'
+    required: false
+    default: 'cypress.config.ts'
+  lint:
+    description: 'Whether to run linting'
+    required: false
+    default: 'true'
+  lint-path:
+    description: 'Path to lint'
+    required: false
+    default: 'src/**'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run lint
+      if: inputs.lint == 'true'
+      shell: bash
+      run: |
+        NODE_OPTIONS=--experimental-vm-modules npx eslint '${{ inputs.lint-path }}' --max-warnings 0
+
+    - name: Run unit tests
+      if: inputs.test-type == 'unit'
+      shell: bash
+      run: |
+        if [ "${{ inputs.coverage }}" = "true" ]; then
+          npm test -- --coverage --watchAll=false
+        else
+          npm test
+        fi
+
+    - name: Run component tests
+      if: inputs.test-type == 'component'
+      shell: bash
+      run: npm test
+
+    - name: Run e2e tests
+      if: inputs.test-type == 'e2e'
+      uses: cypress-io/github-action@v5
+      with:
+        start: npm run dev
+        wait-on: 'http://localhost:5173'
+        config-file: ${{ inputs.cypress-config }}

@@ -1,0 +1,44 @@
+name: 'Deploy Feature'
+description: 'Deploys a feature to the specified environment'
+
+inputs:
+  environment:
+    description: 'Environment to deploy to (development/staging/production)'
+    required: true
+  feature-name:
+    description: 'Name of the feature being deployed'
+    required: true
+  docker-build:
+    description: 'Whether to build docker image'
+    required: false
+    default: 'false'
+  docker-tag:
+    description: 'Docker image tag'
+    required: false
+    default: 'latest'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Docker Buildx
+      if: inputs.docker-build == 'true'
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      if: inputs.docker-build == 'true'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        load: true
+        tags: carved-rock/${{ inputs.feature-name }}:${{ inputs.docker-tag }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Deploy
+      shell: bash
+      run: |
+        echo "Deploying ${{ inputs.feature-name }} feature to ${{ inputs.environment }}..."
+        if [ -n "${{ vars.APP_URL }}" ]; then
+          echo "Environment URL: ${{ vars.APP_URL }}"
+        fi

@@ -1,0 +1,53 @@
+name: 'Security Scan'
+description: 'Runs security scanning using Trivy'
+
+inputs:
+  scan-type:
+    description: 'Type of scan to perform (fs/image/repo)'
+    required: false
+    default: 'fs'
+  severity:
+    description: 'Severity levels to check'
+    required: false
+    default: 'CRITICAL,HIGH'
+  ignore-unfixed:
+    description: 'Whether to ignore unfixed vulnerabilities'
+    required: false
+    default: 'true'
+  image: ## for the class-schedule feature since that team uses Docker
+    description: 'Docker image to scan (required if scan-type is image)'
+    required: false
+    default: ''
+  scan-ref:
+    description: 'Git reference to scan (required if scan-type is repo)'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Trivy filesystem scan
+      if: inputs.scan-type == 'fs'
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        ignore-unfixed: '${{ inputs.ignore-unfixed }}'
+        severity: '${{ inputs.severity }}'
+
+    - name: Run Trivy image scan
+      if: inputs.scan-type == 'image' && inputs.image != ''
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: image
+        image-ref: '${{ inputs.image }}'
+        ignore-unfixed: '${{ inputs.ignore-unfixed }}'
+        severity: '${{ inputs.severity }}'
+
+    - name: Run Trivy repo scan
+      if: inputs.scan-type == 'repo' && inputs.scan-ref != ''
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: repo
+        scan-ref: '${{ inputs.scan-ref }}'
+        ignore-unfixed: '${{ inputs.ignore-unfixed }}'
+        severity: '${{ inputs.severity }}'
